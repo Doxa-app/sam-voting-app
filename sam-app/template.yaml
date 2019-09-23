@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-app
+
+  Sample SAM Template for sam-app
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: python3.7
+    Handler: app.lambda_handler
+    Environment:
+      Variables:
+        VOTES_TABLE_NAME: !Ref VoteTable    
+        ELECTION_NAME: "EMEA_Tech_Summit"
+
+Resources:
+  ElectionTable: 
+   Type: AWS::Serverless::SimpleTable 
+   Properties: 
+      PrimaryKey: 
+         Name: ElectionName 
+         Type: String 
+
+  VoteTable: 
+   Type: AWS::Serverless::SimpleTable 
+   Properties: 
+      PrimaryKey: 
+         Name: ElectionName 
+         Type: String 
+
+  VoteFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src/submit_vote/
+      Environment:
+        Variables:
+          ELECTION_TABLE_NAME: !Ref ElectionTable      
+      Events:
+        Vote:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /vote
+            Method: post
+
+  ListVotesFunction:            
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src/list_votes/
+      Events:
+        Vote:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /list_votes
+            Method: get
+    
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  VoteApi:
+    Description: "API Gateway endpoint URL for Prod stage for Vote function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/vote/"
+  ListVotesApi:
+    Description: "API Gateway endpoint URL for Prod stage for ListVotes function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/list_votes/"
+  VoteFunction:
+    Description: "Vote Lambda Function ARN"
+    Value: !GetAtt VoteFunction.Arn
+  VoteFunctionIamRole:
+    Description: "Implicit IAM Role created for Vote function"
+    Value: !GetAtt VoteFunctionRole.Arn
